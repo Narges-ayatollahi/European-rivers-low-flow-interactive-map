@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>European River Low-Flow Interactive Map</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        #map {
+            height: 780px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+        }
+
+        /* Popup Styling */
+        .leaflet-popup-content-wrapper {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            line-height: 1.5;
+            max-width: 320px;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .popup-img-container {
+            width: 100%;
+            max-height: 180px;
+            overflow: hidden;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            background-color: #e2e8f0;
+        }
+        .popup-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+        .popup-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        .badge-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .popup-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 11px;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+        .popup-date {
+            color: #64748b;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+        .popup-detail {
+            margin-bottom: 4px;
+            color: #334155;
+        }
+        .popup-link {
+            display: inline-block;
+            margin-top: 8px;
+            color: #2563eb;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .popup-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Legend Styling */
+        .legend {
+            background: #ffffff;
+            padding: 12px 16px;
+            line-height: 22px;
+            color: #1e293b;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            font-size: 12px;
+        }
+        .legend b {
+            font-size: 13px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .legend i {
+            width: 12px;
+            height: 12px;
+            float: left;
+            margin-right: 8px;
+            margin-top: 5px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+<h2>European River Low-Flow Interactive Map</h2>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// 1. EMBEDDED DATASET (Bypasses external file fetching completely)
+const riverData = {
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [19.0402, 47.4979] }, "properties": { "River": "Danube", "Country": "Hungary", "Location": "Budapest", "Severity": "High", "Date": "2026-08-01", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Danube water levels hit record lows near Budapest, impacting passenger cruises and revealing historic sandbanks.", "Image URL": "", "Article URL": "https://www.globaltimes.cn/page/202608/1317200.shtml" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [23.9833, 43.7333] }, "properties": { "River": "Danube", "Country": "Romania", "Location": "Corabia", "Severity": "High", "Date": "2026-08-03", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Dredging operations active near Corabia to clear essential shipping channels as barge traffic halts.", "Image URL": "https://www.usnews.com/object/image/0000019f-b16f-d730-adff-f76fe1930000/941c21623afa49d0a7dc33ac519c8dd8Romania_Danube_Drought_724_7.jpg?update-time=1785339222000&size=responsive970", "Article URL": "https://www.usnews.com/news/world/articles/2026-08-03/danube-drought-romania" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [19.845, 45.2551] }, "properties": { "River": "Danube", "Country": "Serbia", "Location": "Novi Sad", "Severity": "High", "Date": "2026-07-30", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Water levels near Strand beach dropped drastically, stranding river vessels along exposed riverbed.", "Image URL": "https://twt-thumbs.washtimes.com/media/image/2026/07/30/Serbia_Danube_Drought_3899__s878x586.jpg?c7307a07ca8f164441d6120c2cbb8ce2e537d255", "Article URL": "https://www.washingtontimes.com/news/2026/jul/30/danube-drought-serbia/" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [22.6083, 44.2961] }, "properties": { "River": "Danube", "Country": "Serbia", "Location": "Prahovo", "Severity": "High", "Date": "2026-08-05", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Sunken WWII German warships re-emerge in low-water reaches near Prahovo.", "Image URL": "https://media.cnn.com/api/v1/images/stellar/prod/screenshot-2026-08-05-125856.png?q=w_1110,c_fill/f_webp", "Article URL": "https://www.cnn.com/2026/08/05/europe/danube-wwii-hulks-exposed-drought-intl/index.html" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [28.0333, 44.3333] }, "properties": { "River": "Danube", "Country": "Romania", "Location": "Cernavodă", "Severity": "High", "Date": "2026-08-04", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Cernavodă nuclear power plant issuing low-water warnings for reactor cooling intake.", "Image URL": "https://insideclimatenews.org/wp-content/uploads/2026/08/GettyImages-2288117286.jpg", "Article URL": "https://insideclimatenews.org/news/04082026/danube-cernavoda-drought/" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [18.8586, 46.6225] }, "properties": { "River": "Danube", "Country": "Hungary", "Location": "Paks", "Severity": "High", "Date": "2026-08-02", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Paks Nuclear Power Plant curtails generation as Danube cooling discharge limits are reached.", "Image URL": "https://www.insurancejournal.com/app/uploads/2026/08/paks-nuclear-plant-on-danube-in-hungary-getty-1536x1025.jpg", "Article URL": "https://www.insurancejournal.com/news/international/2026/08/02/786201.htm" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [22.8758, 43.99] }, "properties": { "River": "Danube", "Country": "Bulgaria", "Location": "Vidin", "Severity": "High", "Date": "2026-08-03", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Bulgarian executive agency for Danube exploration measures near zero navigable depth near Vidin.", "Image URL": "https://media.cnn.com/api/v1/images/stellar/prod/2026-08-03-00-00-2026-08-03-23-59-sentinel-2-l2a-true-color-3-20260805200311611.jpg?c=16x9&q=h_720,w_1280,c_fill/f_webp", "Article URL": "https://www.cnn.com/2026/08/03/world/bulgaria-danube-low-flow/index.html" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [27.3333, 44.2] }, "properties": { "River": "Danube", "Country": "Romania", "Location": "Călărași", "Severity": "High", "Date": "2026-07-21", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Sandbanks cut off river transportation routes between Romania and Bulgaria.", "Image URL": "https://media.cnn.com/api/v1/images/stellar/prod/screenshot-2026-07-21-154031.png?q=w_1110,c_fill/f_webp", "Article URL": "https://www.cnn.com/2026/07/21/europe/calarasi-danube-sandbank-drought/index.html" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [6.2139, 51.8617] }, "properties": { "River": "Rhine", "Country": "Netherlands", "Location": "Lobith", "Severity": "Medium", "Date": "2026-07-28", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "Rijkswaterstaat tracks flow drop below 800 m³/s at Lobith entry point.", "Image URL": "", "Article URL": "https://www.rijkswaterstaat.nl/water/waterbeheer/droogte" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [6.9603, 50.9375] }, "properties": { "River": "Rhine", "Country": "Germany", "Location": "Cologne", "Severity": "High", "Date": "2026-07-31", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Rhine gauge at Cologne drops to historic low, forcing cargo barges to load under 40% capacity.", "Image URL": "https://www.reuters.com/business/environment/rhine-water-level-drops-around-record-lows-costs-industry-rise-2026-07-31/", "Article URL": "https://www.reuters.com/business/environment/rhine-water-level-drops-around-record-lows-costs-industry-rise-2026-07-31/" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [7.7639, 50.0861] }, "properties": { "River": "Rhine", "Country": "Germany", "Location": "Kaub", "Severity": "High", "Date": "2026-08-01", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Kaub bottleneck depth drops below critical 40 cm threshold for industrial freight.", "Image URL": "", "Article URL": "https://www.elwis.de" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [6.7735, 51.2277] }, "properties": { "River": "Rhine", "Country": "Germany", "Location": "Düsseldorf", "Severity": "High", "Date": "2026-08-01", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Exposed dry banks extend over 50 meters into the main river channel.", "Image URL": "https://img.lemde.fr/2022/08/01/0/0/4500/3000/664/0/75/0/f1ab439_1659319107735-dsf7435.JPG", "Article URL": "https://www.lemonde.fr/en/environment/article/2026/08/01/rhine-drought-dusseldorf_599201.html" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [7.2514, 50.5447] }, "properties": { "River": "Ahr (Rhine tributary)", "Country": "Germany", "Location": "Sinzig", "Severity": "Medium", "Date": "2026-07-25", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "Ahr tributary flow down significantly at confluence with Rhine.", "Image URL": "", "Article URL": "https://www.rhein-zeitung.de" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [12.01, 47.85] }, "properties": { "River": "Mangfall", "Country": "Germany", "Location": "Bad Aibling", "Severity": "High", "Date": "2026-07-20", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Severe drying reach recorded along Bavarian Alpine foothills.", "Image URL": "https://static.wixstatic.com/media/b69201_1ee4d581c90143be9a5330558202990f~mv2.jpeg/v1/fill/w_1110,h_833,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/b69201_1ee4d581c90143be9a5330558202990f~mv2.jpeg", "Article URL": "https://www.rosenheim24.de" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [5.8528, 51.8425] }, "properties": { "River": "Waal (Rhine branch)", "Country": "Netherlands", "Location": "Nijmegen", "Severity": "Medium", "Date": "2026-07-29", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "Side channels dried up completely around Spiegelwaal inlet area.", "Image URL": "https://cdn-img.newstory.nl/naturetoday/images/optimized/42269e86-5559-4500-b6ce-3e3addda3347.jpg&h=340&w=848&fmt=webp&v=1784799451", "Article URL": "https://www.naturetoday.com" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [5.78, 51.8] }, "properties": { "River": "Meuse/Waal", "Country": "Netherlands", "Location": "Heumen", "Severity": "Medium", "Date": "2026-07-27", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "Lock closures implemented to retain residual canal water levels.", "Image URL": "https://images.cdn.nos.nl/2/4/J/a/4/f/siwAsjpDfWtuqurfkh6TeXBwKaAzyxLJjEcNehm/8x274x3984x2241-1280x720.webp", "Article URL": "https://nos.nl" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [7.6869, 45.0703] }, "properties": { "River": "Po", "Country": "Italy", "Location": "Turin", "Severity": "High", "Date": "2026-08-01", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Upper Po riverbed dry in urban reaches through Piemonte region.", "Image URL": "https://i2.res.24o.it/images2010/S24/Documenti/2026/08/01/Immagini/Ritagli/67e596cecbd12f16bad24b278320f458-U03365468086qiH-1440x752@IlSole24Ore-Web.jpg?r=650x341", "Article URL": "https://www.ilsole24ore.com" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [10.25, 44.9667] }, "properties": { "River": "Po", "Country": "Italy", "Location": "Parma", "Severity": "High", "Date": "2026-07-28", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Extensive exposed sand islands and record low flow across Emilia-Romagna.", "Image URL": "https://citynews-parmatoday.stgy.ovh/~media/horizontal-hi/15857259911588/fiume-secca-torricella.jpg", "Article URL": "https://www.parmatoday.it" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [10.0227, 45.1333] }, "properties": { "River": "Po", "Country": "Italy", "Location": "Cremona", "Severity": "High", "Date": "2026-07-29", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Cremona gauge measures water level 8 meters below hydrographic zero.", "Image URL": "", "Article URL": "https://www.cremonaoggi.it" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [12.2, 44.95] }, "properties": { "River": "Po", "Country": "Italy", "Location": "Po Delta", "Severity": "High", "Date": "2026-08-02", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Saltwater intrusion pushing over 20 km upstream into agricultural irrigation canals.", "Image URL": "", "Article URL": "https://www.ansa.it" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [1.9094, 47.9029] }, "properties": { "River": "Loire", "Country": "France", "Location": "Orléans", "Severity": "High", "Date": "2026-07-26", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Loire flow rate falls below historical thresholds, creating wide walkable sandbanks.", "Image URL": "https://www.sudradio.fr/wp-content/uploads/2026/07/e3648aff18ff05d893abf413c3cd39aeacf148d7.jpg", "Article URL": "https://www.sudradio.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-1.17, 47.36] }, "properties": { "River": "Loire", "Country": "France", "Location": "Ancenis", "Severity": "High", "Date": "2026-07-12", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Loire-Atlantique prefecture restricts water extraction for non-essential agricultural use.", "Image URL": "https://france3-regions.franceinfo.fr/image/xEHZ0ESb9WG88vxp-5L6BObaiBc/930x620/filters:format(webp)/regions/2026/07/12/6a535de6a8879926946003.jpg", "Article URL": "https://france3-regions.franceinfo.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [6.7167, 47.05] }, "properties": { "River": "Doubs", "Country": "France", "Location": "Villers-le-Lac", "Severity": "High", "Date": "2026-07-27", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Famous Saut du Doubs waterfall completely stops flowing due to upstream river drying.", "Image URL": "https://france3-regions.franceinfo.fr/image/ylEwa0bu60viDKCt5IkmyKfvZQk/930x620/filters:format(webp)/regions/2026/07/27/6a677ceb52f0a517547431.jpg", "Article URL": "https://france3-regions.franceinfo.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [6.12, 46.71] }, "properties": { "River": "Doubs (source)", "Country": "France", "Location": "Mouthe", "Severity": "High", "Date": "2026-07-28", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "The source of the Doubs in Mouthe runs dry as karstic aquifers deplete.", "Image URL": "https://france3-regions.franceinfo.fr/image/bnPuS50pIxYzLRnRs1gapQhj1nA/0x0:1920x1080/800x450/filters:format(webp)/regions/2026/07/28/6a6865d037eb6754800681.jpg", "Article URL": "https://france3-regions.franceinfo.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [0.11, 46.21] }, "properties": { "River": "Dive", "Country": "France", "Location": "Rom", "Severity": "High", "Date": "2026-07-15", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Complete dry reach recorded along the Dive river reach in Deux-Sèvres.", "Image URL": "", "Article URL": "https://www.lanouvellerepublique.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-0.67, 46.26] }, "properties": { "River": "Mignon", "Country": "France", "Location": "Mauzé-sur-le-Mignon", "Severity": "High", "Date": "2026-07-18", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Total surface water disappearance along key segments of the Mignon river.", "Image URL": "", "Article URL": "https://www.lanouvellerepublique.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [2.2137, 46.2276] }, "properties": { "River": "Multiple (national)", "Country": "France", "Location": "Nationwide", "Severity": "High", "Date": "2026-08-02", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Over 68 French departments placed under water restriction alerts.", "Image URL": "", "Article URL": "https://www.legifrance.gouv.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [0.85, 44.11] }, "properties": { "River": "Garonne", "Country": "France", "Location": "Golfech", "Severity": "Medium", "Date": "2026-07-24", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "EDF adjusts nuclear plant power output on Garonne river due to high water temperature and low flow.", "Image URL": "", "Article URL": "https://www.edf.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [5.27, 45.8] }, "properties": { "River": "Rhône/Garonne/Seine", "Country": "France", "Location": "Bugey", "Severity": "Medium", "Date": "2026-07-29", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "Environmental flow limits trigger output reductions at key river-cooled nuclear sites.", "Image URL": "", "Article URL": "https://www.lemonde.fr" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-0.1276, 51.5074] }, "properties": { "River": "Thames", "Country": "UK", "Location": "London", "Severity": "Medium", "Date": "2026-07-29", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "Thames Water requests hosepipe bans across southern England following prolonged dry weather.", "Image URL": "https://hermes.media.static.aol.com/media/2026/07/29/98d2198d-8a9a-3e78-8e33-24587d68f707/f8cd2e8b-0b81-48ef-9a63-af3471446c6f.jpg", "Article URL": "https://www.bbc.com/news" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-2.7156, 52.0564] }, "properties": { "River": "Wye", "Country": "UK", "Location": "Hereford", "Severity": "High", "Date": "2026-07-22", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "River Wye water levels drop severely, threatening river habitat and salmon populations.", "Image URL": "", "Article URL": "https://www.bbc.com/news/uk-england-hereford-worcester" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-3.7837, 52.1307] }, "properties": { "River": "Multiple", "Country": "UK", "Location": "Wales", "Severity": "Medium", "Date": "2026-07-26", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "Natural Resources Wales declares official drought status for south-west Wales.", "Image URL": "", "Article URL": "https://naturalresources.wales" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [21.0122, 52.2297] }, "properties": { "River": "Vistula", "Country": "Poland", "Location": "Warsaw", "Severity": "High", "Date": "2026-07-14", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Vistula in Warsaw falls to 22 cm, approaching all-time historic low levels.", "Image URL": "https://english.news.cn/europe/20260714/f801627b584d42e19d604d3ca47524ce/20260714f8bd88c49bf4464794abac9a99cdb8cd_20260714b6778a3a37974e1abcc496fc79b2a950.jpg", "Article URL": "https://english.news.cn" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [21.85, 50.88] }, "properties": { "River": "Vistula", "Country": "Poland", "Location": "Annopol", "Severity": "High", "Date": "2026-07-16", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Aggressively low water level recorded along mid-Vistula hydrometric stations.", "Image URL": "", "Article URL": "https://www.imgw.pl" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [16.9252, 52.4064] }, "properties": { "River": "Warta", "Country": "Poland", "Location": "Poznań", "Severity": "High", "Date": "2026-07-20", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Warta flow down severely, exposing river bed structures through Poznań city center.", "Image URL": "", "Article URL": "https://www.poznan.pl" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [20.08, 49.67] }, "properties": { "River": "Mszanka", "Country": "Poland", "Location": "Mszana Dolna", "Severity": "High", "Date": "2026-07-10", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Mountain stream dries up completely in Beskid island region.", "Image URL": "", "Article URL": "https://www.radiokrakow.pl" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [22.5, 49.3] }, "properties": { "River": "San", "Country": "Poland", "Location": "Bieszczady", "Severity": "High", "Date": "2026-07-12", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Upper San river reaches hit historic low flow levels.", "Image URL": "", "Article URL": "https://www.nowiny24.pl" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-6.98, 42.41] }, "properties": { "River": "Sil", "Country": "Spain", "Location": "O Barco de Valdeorras", "Severity": "High", "Date": "2026-07-19", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Much lower than average", "Description": "Hydropower output suspended along Sil river reach due to depleted reservoir inflows.", "Image URL": "", "Article URL": "https://www.farodevigo.es" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-0.22, 38.54] }, "properties": { "River": "Serpis / Reservoirs", "Country": "Spain", "Location": "Marina Baja", "Severity": "High", "Date": "2026-07-25", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lowest recorded for month", "Description": "Critical water emergency declared across Alicante reservoir network.", "Image URL": "", "Article URL": "https://www.informacion.es" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [18.05, 46.91] }, "properties": { "River": "Lake Balaton", "Country": "Hungary", "Location": "Siófok", "Severity": "Medium", "Date": "2026-07-30", "EFAS Jun-2026 Flow Category (Copernicus C3S)": "Lower than average", "Description": "High summer evaporation rates cause lake water level to drop below optimal seasonal average.", "Image URL": "", "Article URL": "https://www.hungarytoday.hu" } }
+  ]
+};
+
+// 2. Initialize Leaflet Map over Europe
+const map = L.map('map').setView([48.5, 10], 5);
+
+// 3. BASE MAP — single Esri layer only (World Terrain Base, the layer Esri
+//    itself recommends pairing with the Hydro Reference Overlay below)
+const esriBase = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}',
+    {
+        maxZoom: 13, // this Esri service tops out around z13; overlay below goes further
+        attribution: 'Basemap &copy; Esri &mdash; Esri, USGS, NOAA'
+    }
+).addTo(map);
+
+// 4. RIVER NAMES LAYER — real Esri Hydro Reference Overlay (labeled rivers,
+//    lakes, drainage network; names sourced from geonames.org). Transparent
+//    background, designed to sit on top of a plain base map like the one above.
+const hydroOverlay = L.tileLayer(
+    'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Esri_Hydro_Reference_Overlay/MapServer/tile/{z}/{y}/{x}',
+    {
+        maxZoom: 16,
+        opacity: 0.95,
+        attribution: 'Hydro Reference Overlay &copy; Esri'
+    }
+).addTo(map);
+
+// Layer Control Box — just the one toggle now (river-name overlay on/off)
+L.control.layers(
+    null,
+    { "River names (Esri Hydro Reference Overlay)": hydroOverlay },
+    { collapsed: false }
+).addTo(map);
+
+// 5. COLOR MAPPER BY SEVERITY
+function getMarkerColor(props) {
+    const sev = (props.Severity || '').toLowerCase().trim();
+    const efas = (props['EFAS Jun-2026 Flow Category (Copernicus C3S)'] || '').toLowerCase().trim();
+
+    if (sev === 'high' || efas.includes('lowest')) return '#991b1b';  // Dark Crimson
+    if (efas.includes('much lower') || sev === 'severe') return '#ef4444'; // Bright Red
+    if (sev === 'medium' || efas.includes('lower')) return '#f97316';     // Orange
+    return '#eab308'; // Yellow
+}
+
+// 6. RENDER MARKERS FROM EMBEDDED GEODATA
+const markerLayer = L.geoJSON(riverData, {
+    pointToLayer: function(feature, latlng) {
+        const props = feature.properties || {};
+        const color = getMarkerColor(props);
+
+        return L.circleMarker(latlng, {
+            radius: 9,
+            fillColor: color,
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.92
+        });
+    },
+    onEachFeature: function(feature, layer) {
+        const props = feature.properties || {};
+        let popupHtml = '';
+
+        // A. Image Preview Box
+        const imgUrl = props['Image URL'];
+        if (imgUrl && typeof imgUrl === 'string' && imgUrl.startsWith('http')) {
+            popupHtml += `
+            <div class="popup-img-container">
+                <img src="${imgUrl}" class="popup-img" alt="River Location Photo" 
+                     referrerpolicy="no-referrer" loading="lazy" 
+                     onerror="this.parentElement.style.display='none';">
+            </div>`;
+        }
+
+        // B. Badges
+        popupHtml += `<div class="badge-group">`;
+        if (props.Severity) {
+            const color = getMarkerColor(props);
+            popupHtml += `<span class="popup-badge" style="background-color:${color};">Severity: ${props.Severity}</span>`;
+        }
+        if (props['EFAS Jun-2026 Flow Category (Copernicus C3S)']) {
+            popupHtml += `<span class="popup-badge" style="background-color:#475569;">${props['EFAS Jun-2026 Flow Category (Copernicus C3S)']}</span>`;
+        }
+        popupHtml += `</div>`;
+
+        // C. Title & Details
+        const river = props.River || 'River Event';
+        const country = props.Country ? ` (${props.Country})` : '';
+        popupHtml += `<div class="popup-title">${river}${country}</div>`;
+
+        if (props.Location) popupHtml += `<div class="popup-detail"><b>Location:</b> ${props.Location}</div>`;
+        if (props.Date) popupHtml += `<div class="popup-date"><b>Date:</b> ${props.Date}</div>`;
+        if (props.Description) popupHtml += `<div class="popup-detail" style="margin-top:6px;">${props.Description}</div>`;
+
+        // D. External Link
+        if (props['Article URL'] && props['Article URL'].startsWith('http')) {
+            popupHtml += `<a href="${props['Article URL']}" target="_blank" class="popup-link">🔗 Read Source Article &rarr;</a>`;
+        }
+
+        layer.bindPopup(popupHtml);
+    }
+}).addTo(map);
+
+// Auto-fit zoom bounds
+if (markerLayer.getBounds().isValid()) {
+    map.fitBounds(markerLayer.getBounds().pad(0.08));
+}
+
+// 7. MAP LEGEND
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = '<b>Low-Flow Severity</b>' +
+        '<div><i style="background: #991b1b"></i> High / Lowest Flow</div>' +
+        '<div><i style="background: #ef4444"></i> Much Lower than Avg</div>' +
+        '<div><i style="background: #f97316"></i> Medium / Lower</div>' +
+        '<div><i style="background: #eab308"></i> Near Average</div>';
+    return div;
+};
+legend.addTo(map);
+
+</script>
+</body>
+</html>
